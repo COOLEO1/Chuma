@@ -4,6 +4,9 @@ on:
     branches: [main]
   workflow_dispatch:
 
+permissions:
+  contents: write
+
 jobs:
   build:
     runs-on: ubuntu-latest
@@ -18,10 +21,32 @@ jobs:
           channel: stable
           cache: true
       - name: Generate Android project
-        run: flutter create . --platforms=android --org com.leon.chuma --project-name chuma
+        run: |
+          flutter create . --platforms=android --org com.leon.chuma --project-name chuma
+          sed -i 's/android:label="chuma"/android:label="Chuma"/' android/app/src/main/AndroidManifest.xml
       - run: flutter pub get
-      - run: flutter build apk --release
-      - uses: actions/upload-artifact@v4
+      - name: Make icon
+        run: |
+          pip install pillow
+          python tools/make_icon.py
+          dart run flutter_launcher_icons
+      - name: Build
+        run: flutter build apk --release --build-number=${{ github.run_number }}
+      - name: Sign
+        env:
+          KS_B64: ${{ secrets.KEYSTORE_BASE64 }}
+          KS_PASS: ${{ secrets.KEYSTORE_PASSWORD }}
+          KEY_ALIAS: ${{ secrets.KEY_ALIAS }}
+          KEY_PASS: ${{ secrets.KEY_PASSWORD }}
+        run: |
+          echo "$KS_B64" | base64 -d > "$RUNNER_TEMP/release.jks"
+          SIGNER=$(ls $ANDROID_HOME/build-tools/*/apksigner | sort -V | tail -1)
+          cp build/app/outputs/flutter-apk/app-release.apk chuma.apk
+          $SIGNER sign --ks "$RUNNER_TEMP/release.jks" --ks-key-alias "$KEY_ALIAS" \
+            --ks-pass env:KS_PASS --key-pass env:KEY_PASS chuma.apk
+          $SIGNER verify chuma.apk
+      - uses: softprops/action-gh-release@v2
         with:
-          name: chuma-apk
-          path: build/app/outputs/flutter-apk/app-release.apk
+          tag_name: v0.1.${{ github.run_number }}
+          name: Chuma build ${{ github.run_number }}
+          files: chuma.apk
