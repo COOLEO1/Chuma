@@ -1,3 +1,4 @@
+import 'dart:convert';
 import 'dart:math';
 import 'package:flutter/foundation.dart';
 import 'package:path/path.dart' as p;
@@ -78,6 +79,31 @@ class Store extends ChangeNotifier {
     budget = v;
     await _prefs.setInt('budget', v);
     notifyListeners();
+  }
+
+  String exportJson() => jsonEncode({
+        'v': 1,
+        'budget': budget,
+        'goals': goals.map((g) => g.toMap()).toList(),
+        'txns': txns.map((t) => t.toMap()).toList(),
+      });
+
+  Future<void> importJson(String s) async {
+    final j = jsonDecode(s) as Map<String, dynamic>;
+    final gs = (j['goals'] as List).cast<Map<String, dynamic>>();
+    final ts = (j['txns'] as List).cast<Map<String, dynamic>>();
+    await _db.transaction((tx) async {
+      await tx.delete('txns');
+      await tx.delete('goals');
+      for (final g in gs) {
+        await tx.insert('goals', g);
+      }
+      for (final t in ts) {
+        await tx.insert('txns', t);
+      }
+    });
+    await setBudget((j['budget'] as num?)?.toInt() ?? 0);
+    await _reload();
   }
 
   String goalName(int? id) {

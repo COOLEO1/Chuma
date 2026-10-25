@@ -23,7 +23,9 @@ jobs:
       - name: Generate Android project
         run: |
           flutter create . --platforms=android --org com.leon.chuma --project-name chuma
-          sed -i 's/android:label="chuma"/android:label="Chuma"/' android/app/src/main/AndroidManifest.xml
+          M=android/app/src/main/AndroidManifest.xml
+          sed -i 's/android:label="chuma"/android:label="Chuma"/' $M
+          sed -i 's|<application|<uses-permission android:name="android.permission.INTERNET"/>\n    <application|' $M
       - run: flutter pub get
       - name: Make icon
         run: |
@@ -31,7 +33,7 @@ jobs:
           python tools/make_icon.py
           dart run flutter_launcher_icons
       - name: Build
-        run: flutter build apk --release --build-number=${{ github.run_number }}
+        run: flutter build apk --release --target-platform android-arm --build-number=${{ github.run_number }}
       - name: Sign
         env:
           KS_B64: ${{ secrets.KEYSTORE_BASE64 }}
@@ -47,6 +49,6 @@ jobs:
           $SIGNER verify chuma.apk
       - uses: softprops/action-gh-release@v2
         with:
-          tag_name: v0.1.${{ github.run_number }}
+          tag_name: v0.2.${{ github.run_number }}
           name: Chuma build ${{ github.run_number }}
           files: chuma.apk

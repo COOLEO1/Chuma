@@ -2,6 +2,9 @@ import 'package:flutter/material.dart';
 import 'add_sheet.dart';
 import 'goals.dart';
 import 'history.dart';
+import 'insights.dart';
+import 'settings.dart';
+import 'sms.dart';
 import 'store.dart';
 import 'theme.dart';
 import 'today.dart';
@@ -43,16 +46,33 @@ class _ShellState extends State<Shell> {
           builder: (_, __) => switch (tab) {
             0 => const TodayScreen(),
             1 => const HistoryScreen(),
-            _ => const GoalsScreen(),
+            2 => const InsightsScreen(),
+            3 => const GoalsScreen(),
+            _ => const SettingsScreen(),
           },
         ),
       ),
-      floatingActionButton: FloatingActionButton.extended(
-        onPressed: () => openAdd(context),
-        backgroundColor: C.navy,
-        foregroundColor: Colors.white,
-        icon: const Icon(Icons.add),
-        label: const Text('Add'),
+      floatingActionButton: Row(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          FloatingActionButton.small(
+            heroTag: 'sms',
+            tooltip: 'Paste mobile money SMS',
+            backgroundColor: Colors.white,
+            foregroundColor: C.navy,
+            onPressed: () => openSmsPaste(context),
+            child: const Icon(Icons.sms_outlined),
+          ),
+          const SizedBox(width: 10),
+          FloatingActionButton.extended(
+            heroTag: 'add',
+            onPressed: () => openAdd(context),
+            backgroundColor: C.navy,
+            foregroundColor: Colors.white,
+            icon: const Icon(Icons.add),
+            label: const Text('Add'),
+          ),
+        ],
       ),
       bottomNavigationBar: NavigationBar(
         selectedIndex: tab,
@@ -64,9 +84,15 @@ class _ShellState extends State<Shell> {
               label: 'Today'),
           NavigationDestination(icon: Icon(Icons.history), label: 'History'),
           NavigationDestination(
+              icon: Icon(Icons.bar_chart), label: 'Insights'),
+          NavigationDestination(
               icon: Icon(Icons.flag_outlined),
               selectedIcon: Icon(Icons.flag),
               label: 'Goals'),
+          NavigationDestination(
+              icon: Icon(Icons.settings_outlined),
+              selectedIcon: Icon(Icons.settings),
+              label: 'Settings'),
         ],
       ),
     );
