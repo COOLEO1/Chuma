@@ -16,6 +16,7 @@ class SettingsScreen extends StatefulWidget {
 class _SettingsState extends State<SettingsScreen> {
   final keyC = TextEditingController();
   final modelC = TextEditingController(text: defaultGroqModel);
+  final nameC = TextEditingController();
   bool hide = true;
 
   @override
@@ -30,6 +31,7 @@ class _SettingsState extends State<SettingsScreen> {
     setState(() {
       keyC.text = p.getString('groq_key') ?? '';
       modelC.text = p.getString('groq_model') ?? defaultGroqModel;
+      nameC.text = store.name;
     });
   }
 
@@ -98,6 +100,29 @@ class _SettingsState extends State<SettingsScreen> {
         const Text('Settings',
             style: TextStyle(
                 fontSize: 22, fontWeight: FontWeight.w700, color: C.ink)),
+        sectionTitle('Your name'),
+        Panel(
+          child: Row(children: [
+            Expanded(
+              child: TextField(
+                controller: nameC,
+                textCapitalization: TextCapitalization.words,
+                decoration: const InputDecoration(
+                    labelText: 'Name on the home screen',
+                    border: OutlineInputBorder()),
+              ),
+            ),
+            const SizedBox(width: 10),
+            FilledButton(
+              style: FilledButton.styleFrom(backgroundColor: C.navy),
+              onPressed: () async {
+                await store.setName(nameC.text);
+                if (mounted) _toast('Saved');
+              },
+              child: const Text('Save'),
+            ),
+          ]),
+        ),
         sectionTitle('Monthly budget'),
         Panel(
           child: Row(children: [

@@ -73,6 +73,8 @@ class HistoryScreen extends StatelessWidget {
               messenger.hideCurrentSnackBar();
               messenger.showSnackBar(SnackBar(
                 content: const Text('Deleted'),
+                persist: false,
+                duration: const Duration(seconds: 4),
                 action: SnackBarAction(
                   label: 'Undo',
                   onPressed: () => store.addTxn(Txn(

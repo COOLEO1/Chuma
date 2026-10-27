@@ -121,7 +121,9 @@ class TxnTile extends StatelessWidget {
         : DateFormat('d MMM HH:mm').format(t.ts);
     final sub =
         t.kind == Kind.saving ? '${store.goalName(t.goalId)}, $when' : when;
-    final title = t.kind == Kind.saving ? 'Saved' : t.category;
+    final title = t.kind == Kind.saving
+        ? (t.category == 'Opening' ? 'Starting amount' : 'Saved')
+        : t.category;
     return Container(
       padding: const EdgeInsets.all(12),
       decoration: BoxDecoration(

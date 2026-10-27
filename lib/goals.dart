@@ -65,7 +65,7 @@ class GoalsScreen extends StatelessWidget {
           style: TextStyle(color: C.teal, fontWeight: FontWeight.w600));
     } else if (plan.eta == null) {
       pace = const Text(
-          'No savings logged yet. Add your first one to see your pace.',
+          'Your pace appears after 7 days of saving, so it reflects your real habit.',
           style: TextStyle(color: C.muted));
     } else if (plan.onTrack) {
       pace = Text('At your pace you will reach it by ${fmt.format(plan.eta!)}.',
@@ -98,8 +98,17 @@ class GoalsScreen extends StatelessWidget {
             ]),
           ),
           PopupMenuButton<String>(
-            onSelected: (_) => _confirmDelete(context, g),
+            onSelected: (v) {
+              if (v == 'open') {
+                store.markOpening(g);
+              } else {
+                _confirmDelete(context, g);
+              }
+            },
             itemBuilder: (_) => const [
+              PopupMenuItem(
+                  value: 'open',
+                  child: Text('Count first saving as starting amount')),
               PopupMenuItem(value: 'del', child: Text('Delete goal')),
             ],
           ),

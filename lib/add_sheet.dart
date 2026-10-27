@@ -75,6 +75,8 @@ class _AddSheetState extends State<AddSheet> {
     messenger.hideCurrentSnackBar();
     messenger.showSnackBar(SnackBar(
       content: Text('Logged ${mk(amount)}'),
+      persist: false,
+      duration: const Duration(seconds: 4),
       action: SnackBarAction(label: 'Undo', onPressed: () => store.deleteTxn(id)),
     ));
   }

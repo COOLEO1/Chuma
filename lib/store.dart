@@ -9,7 +9,7 @@ import 'models.dart';
 class GoalPlan {
   final int saved, remaining, daysLeft, perDay;
   final DateTime? eta;
-  final bool done, onTrack;
+  final bool done, onTrack, paceReady;
   GoalPlan({
     required this.saved,
     required this.remaining,
@@ -18,6 +18,7 @@ class GoalPlan {
     required this.eta,
     required this.done,
     required this.onTrack,
+    required this.paceReady,
   });
 }
 
@@ -27,10 +28,12 @@ class Store extends ChangeNotifier {
   List<Txn> txns = [];
   List<Goal> goals = [];
   int budget = 0;
+  String name = 'Leon';
 
   Future<void> load() async {
     _prefs = await SharedPreferences.getInstance();
     budget = _prefs.getInt('budget') ?? 0;
+    name = _prefs.getString('name') ?? 'Leon';
     _db = await openDatabase(
       p.join(await getDatabasesPath(), 'chuma.db'),
       version: 1,
@@ -161,11 +164,24 @@ class Store extends ChangeNotifier {
     final remaining = max(0, g.target - saved);
     final daysLeft = max(1, dayOf(g.deadline).difference(today).inDays);
     final perDay = (remaining / daysLeft).ceil();
-    final active = max(1, today.difference(dayOf(g.created)).inDays + 1);
-    final avg = saved / active;
+    final own = txns
+        .where((t) =>
+            t.kind == Kind.saving &&
+            t.goalId == g.id &&
+            t.category != 'Opening')
+        .toList();
+    var paceReady = false;
     DateTime? eta;
-    if (remaining > 0 && avg > 0) {
-      eta = today.add(Duration(days: (remaining / avg).ceil()));
+    if (own.isNotEmpty) {
+      final first = dayOf(
+          own.map((t) => t.ts).reduce((a, b) => a.isBefore(b) ? a : b));
+      final active = today.difference(first).inDays + 1;
+      final ownSum = own.fold<int>(0, (s, t) => s + t.amount);
+      paceReady = active >= 7;
+      if (paceReady && remaining > 0 && ownSum > 0) {
+        eta = today
+            .add(Duration(days: (remaining / (ownSum / active)).ceil()));
+      }
     }
     final done = remaining == 0;
     final onTrack = done || (eta != null && !eta.isAfter(dayOf(g.deadline)));
@@ -177,7 +193,27 @@ class Store extends ChangeNotifier {
       eta: eta,
       done: done,
       onTrack: onTrack,
+      paceReady: paceReady,
     );
+  }
+
+  // Marks a goal's first saving as its starting amount, so it is not
+  // counted as a saving habit when working out your pace.
+  Future<void> markOpening(Goal g) async {
+    final list = txns
+        .where((t) => t.kind == Kind.saving && t.goalId == g.id)
+        .toList()
+      ..sort((a, b) => a.ts.compareTo(b.ts));
+    if (list.isEmpty) return;
+    await _db.update('txns', {'category': 'Opening'},
+        where: 'id = ?', whereArgs: [list.first.id]);
+    await _reload();
+  }
+
+  Future<void> setName(String v) async {
+    name = v.trim().isEmpty ? 'Leon' : v.trim();
+    await _prefs.setString('name', name);
+    notifyListeners();
   }
 }
 

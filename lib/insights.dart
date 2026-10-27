@@ -25,10 +25,13 @@ int _sumDay(Kind k, DateTime d) => store.txns
 
 const _systemPrompt =
     'You are Chuma, a friendly money coach inside a personal finance app used in Malawi. '
-    'Amounts are in Malawi kwacha (MK). Write 3 to 4 short sentences in plain English, '
-    'speaking to the user as "you". Mention one thing that changed versus last week, '
-    'one thing to watch, and one concrete action for the next 7 days. '
-    'Use only the numbers given. Do not use markdown or lists.';
+    'Amounts are in Malawi kwacha (MK). Write exactly 3 short sentences in plain English, '
+    'speaking to the user as "you". Use only the numbers given and never invent numbers. '
+    'Sentence 1: what changed versus last week. Sentence 2: one thing to watch. '
+    'Sentence 3: one realistic action for the next 7 days. '
+    'Rules: never tell the user to keep spending at zero; airtime, data and transport spending is normal. '
+    'A large deposit into a goal is a one-off, so do not call it a weekly habit or a streak. '
+    'Quote the daily saving target exactly as given. No markdown, no lists.';
 
 class InsightsScreen extends StatefulWidget {
   const InsightsScreen({super.key});
@@ -42,6 +45,18 @@ class _InsightsState extends State<InsightsScreen> {
   String? summary;
   String? error;
   bool loading = false;
+
+  @override
+  void initState() {
+    super.initState();
+    _loadSaved();
+  }
+
+  Future<void> _loadSaved() async {
+    final p = await SharedPreferences.getInstance();
+    final s = p.getString('summary_text');
+    if (s != null && mounted) setState(() => summary = s);
+  }
 
   int _sum(Kind k, int from, int to) => store.txns
       .where((t) => t.kind == k && _ago(t.ts) >= from && _ago(t.ts) <= to)
@@ -91,6 +106,8 @@ class _InsightsState extends State<InsightsScreen> {
       final text = await Groq.chat(key, model, _systemPrompt, _digest());
       if (!mounted) return;
       setState(() => summary = text);
+      await (await SharedPreferences.getInstance())
+          .setString('summary_text', text);
     } on SocketException {
       if (!mounted) return;
       setState(() =>

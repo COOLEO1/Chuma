@@ -5,7 +5,7 @@ import 'store.dart';
 import 'theme.dart';
 
 class SmsResult {
-  final Kind kind;
+  final Kind? kind; // null when the message does not say
   final int amount, fee;
   final String category;
   SmsResult(this.kind, this.amount, this.category, this.fee);
@@ -13,17 +13,36 @@ class SmsResult {
 
 int? _num(String s) => double.tryParse(s.replaceAll(',', ''))?.round();
 
+const _n = r'([0-9][0-9,]*(?:\.[0-9]+)?)';
+
 SmsResult? parseSms(String raw) {
   final text = raw.replaceAll(RegExp(r'\s+'), ' ');
   final lower = text.toLowerCase();
-  final pre = RegExp(r'(?:mwk|mk)\s?([0-9][0-9,]*(?:\.[0-9]+)?)',
-      caseSensitive: false);
-  final suf = RegExp(r'([0-9][0-9,]*(?:\.[0-9]+)?)\s?(?:mwk|mk)\b',
-      caseSensitive: false);
-  final m = pre.firstMatch(text) ?? suf.firstMatch(text);
-  if (m == null) return null;
-  final amount = _num(m.group(1)!);
-  if (amount == null || amount <= 0) return null;
+
+  int? amount;
+  final amtM =
+      RegExp('(?:amt|amount)[^0-9]{0,8}$_n', caseSensitive: false)
+          .firstMatch(text);
+  if (amtM != null) amount = _num(amtM.group(1)!);
+  if (amount == null || amount <= 0) {
+    amount = null;
+    final any = RegExp('(?:mwk|mk)\\s?$_n|$_n\\s?(?:mwk|mk)\\b',
+        caseSensitive: false);
+    for (final m in any.allMatches(text)) {
+      final v = _num(m.group(1) ?? m.group(2)!);
+      if (v == null || v <= 0) continue;
+      final before = lower.substring(m.start < 12 ? 0 : m.start - 12, m.start);
+      if (before.contains('bal') ||
+          before.contains('fee') ||
+          before.contains('levy') ||
+          before.contains('charge')) {
+        continue;
+      }
+      amount = v;
+      break;
+    }
+  }
+  if (amount == null) return null;
 
   int firstAt(List<String> words) {
     var best = -1;
@@ -39,11 +58,13 @@ SmsResult? parseSms(String raw) {
     'sent', 'paid', 'payment', 'withdraw', 'bought', 'purchase',
     'airtime', 'transferred', 'debited', 'cash out', 'cash-out'
   ]);
-  if (inc < 0 && exp < 0) return null;
-  final isIncome = inc >= 0 && (exp < 0 || inc < exp);
+  Kind? kind;
+  if (inc >= 0 || exp >= 0) {
+    kind = (inc >= 0 && (exp < 0 || inc < exp)) ? Kind.income : Kind.expense;
+  }
 
   var cat = 'Other';
-  if (!isIncome) {
+  if (kind == Kind.expense) {
     if (lower.contains('airtime')) {
       cat = 'Airtime';
     } else if (lower.contains('bundle') ||
@@ -53,12 +74,14 @@ SmsResult? parseSms(String raw) {
     }
   }
 
-  final feeM = RegExp(r'(?:fee|charge)[^0-9]{0,25}([0-9][0-9,]*(?:\.[0-9]+)?)',
-          caseSensitive: false)
-      .firstMatch(text);
-  final fee = isIncome || feeM == null ? 0 : (_num(feeM.group(1)!) ?? 0);
+  int label(String l) {
+    final m =
+        RegExp('$l[^0-9]{0,12}$_n', caseSensitive: false).firstMatch(text);
+    return m == null ? 0 : (_num(m.group(1)!) ?? 0);
+  }
 
-  return SmsResult(isIncome ? Kind.income : Kind.expense, amount, cat, fee);
+  final fee = kind == Kind.income ? 0 : label('fee') + label('levy') + label('charge');
+  return SmsResult(kind, amount, cat, fee);
 }
 
 Future<void> openSmsPaste(BuildContext context) => showModalBottomSheet<void>(
@@ -83,11 +106,15 @@ class _SmsSheetState extends State<_SmsSheet> {
 
   Future<void> _paste() async {
     final d = await Clipboard.getData(Clipboard.kTextPlain);
-    if (d?.text != null) setState(() => c.text = d!.text!);
+    if (d?.text != null) {
+      setState(() {
+        c.text = d!.text!;
+        forced = null;
+      });
+    }
   }
 
-  Future<void> _log(SmsResult r) async {
-    final k = forced ?? r.kind;
+  Future<void> _log(SmsResult r, Kind k) async {
     final nav = Navigator.of(context);
     final messenger = ScaffoldMessenger.of(context);
     final cat = k == r.kind ? r.category : 'Other';
@@ -142,30 +169,40 @@ class _SmsSheetState extends State<_SmsSheet> {
                 'Could not find an amount in that message. You can log it by hand with Add.',
                 style: TextStyle(color: C.coral)),
           ),
-        if (r != null && k != null) ...[
+        if (r != null) ...[
           const SizedBox(height: 8),
           Panel(
             child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
               Text(
-                  '${k == Kind.income ? "Received" : "Spent"} ${mk(r.amount)}',
+                  k == null
+                      ? 'Amount ${mk(r.amount)}'
+                      : '${k == Kind.income ? "Received" : "Spent"} ${mk(r.amount)}',
                   style: TextStyle(
                       fontSize: 22,
                       fontWeight: FontWeight.w700,
-                      color: k == Kind.income ? C.teal : C.coral)),
+                      color: k == null
+                          ? C.ink
+                          : (k == Kind.income ? C.teal : C.coral))),
+              if (k == null)
+                const Text(
+                    'This message does not say if money came in or went out. Pick one.',
+                    style: TextStyle(color: C.muted)),
               if (k == Kind.expense)
                 Text('Category: ${k == r.kind ? r.category : "Other"}',
                     style: const TextStyle(color: C.muted)),
               if (k == Kind.expense && r.fee > 0)
-                Text('Fee ${mk(r.fee)} will be logged under Fees',
+                Text('Fee and levy ${mk(r.fee)} will be logged under Fees',
                     style: const TextStyle(color: C.muted)),
               const SizedBox(height: 10),
               SegmentedButton<Kind>(
+                emptySelectionAllowed: r.kind == null,
                 segments: const [
                   ButtonSegment(value: Kind.expense, label: Text('Spent')),
                   ButtonSegment(value: Kind.income, label: Text('Received')),
                 ],
-                selected: {k},
-                onSelectionChanged: (s) => setState(() => forced = s.first),
+                selected: k == null ? <Kind>{} : {k},
+                onSelectionChanged: (s) =>
+                    setState(() => forced = s.isEmpty ? null : s.first),
               ),
             ]),
           ),
@@ -175,7 +212,7 @@ class _SmsSheetState extends State<_SmsSheet> {
             height: 52,
             child: FilledButton(
               style: FilledButton.styleFrom(backgroundColor: C.navy),
-              onPressed: () => _log(r),
+              onPressed: k == null ? null : () => _log(r, k),
               child: const Text('Log it'),
             ),
           ),

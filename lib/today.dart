@@ -50,7 +50,7 @@ class TodayScreen extends StatelessWidget {
     return ListView(
       padding: const EdgeInsets.fromLTRB(16, 16, 16, 100),
       children: [
-        Text('${greeting()}, Leon',
+        Text('${greeting()}, ${store.name}',
             style: const TextStyle(
                 fontSize: 22, fontWeight: FontWeight.w700, color: C.ink)),
         const SizedBox(height: 16),
@@ -99,7 +99,7 @@ class TodayScreen extends StatelessWidget {
       padding: const EdgeInsets.fromLTRB(20, 12, 8, 20),
       child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
         Row(children: [
-          const Text('Safe to spend today',
+          Text(over ? "Over today's limit" : 'Safe to spend today',
               style: TextStyle(color: Colors.white70, fontSize: 14)),
           const Spacer(),
           IconButton(
@@ -120,7 +120,7 @@ class TodayScreen extends StatelessWidget {
           ),
         ] else ...[
           TweenAnimationBuilder<double>(
-            tween: Tween<double>(begin: 0, end: left.toDouble()),
+            tween: Tween<double>(begin: 0, end: left.abs().toDouble()),
             duration: const Duration(milliseconds: 700),
             curve: Curves.easeOutCubic,
             builder: (_, v, __) => Text(
@@ -185,7 +185,9 @@ class TodayScreen extends StatelessWidget {
             Text(msg, style: const TextStyle(color: C.muted, fontSize: 13)),
           ]),
         ),
-        if (!plan.done)
+        if (plan.done || doneToday)
+          const Icon(Icons.check_circle, color: C.teal, size: 30)
+        else
           FilledButton.tonal(
             onPressed: () => openAdd(context, kind: Kind.saving, goalId: g.id),
             child: const Text('Save'),
