@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'add_sheet.dart';
+import 'ask.dart';
 import 'goals.dart';
 import 'history.dart';
 import 'insights.dart';
@@ -63,7 +64,17 @@ class _ShellState extends State<Shell> {
             onPressed: () => openSmsPaste(context),
             child: const Icon(Icons.sms_outlined),
           ),
-          const SizedBox(width: 10),
+          const SizedBox(width: 8),
+          FloatingActionButton.small(
+            heroTag: 'ask',
+            tooltip: 'Ask Chuma',
+            backgroundColor: Colors.white,
+            foregroundColor: C.navy,
+            onPressed: () => Navigator.of(context).push(
+                MaterialPageRoute(builder: (_) => const AskScreen())),
+            child: const Icon(Icons.auto_awesome),
+          ),
+          const SizedBox(width: 8),
           FloatingActionButton.extended(
             heroTag: 'add',
             onPressed: () => openAdd(context),

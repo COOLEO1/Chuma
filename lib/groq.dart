@@ -5,7 +5,19 @@ const defaultGroqModel = 'openai/gpt-oss-120b';
 
 class Groq {
   static Future<String> chat(
-      String key, String model, String system, String user) async {
+          String key, String model, String system, String user) =>
+      converse(
+          key,
+          model,
+          [
+            {'role': 'system', 'content': system},
+            {'role': 'user', 'content': user},
+          ],
+          effort: 'low');
+
+  static Future<String> converse(
+      String key, String model, List<Map<String, String>> messages,
+      {String effort = 'medium'}) async {
     final client = HttpClient()
       ..connectionTimeout = const Duration(seconds: 15);
     try {
@@ -15,17 +27,14 @@ class Groq {
       req.headers.contentType = ContentType.json;
       final bytes = utf8.encode(jsonEncode({
         'model': model,
-        'messages': [
-          {'role': 'system', 'content': system},
-          {'role': 'user', 'content': user},
-        ],
-        'temperature': 0.4,
-        'max_completion_tokens': 1500,
-        if (model.contains('gpt-oss')) 'reasoning_effort': 'low',
+        'messages': messages,
+        'temperature': 0.3,
+        'max_completion_tokens': 2500,
+        if (model.contains('gpt-oss')) 'reasoning_effort': effort,
       }));
       req.headers.contentLength = bytes.length;
       req.add(bytes);
-      final res = await req.close().timeout(const Duration(seconds: 40));
+      final res = await req.close().timeout(const Duration(seconds: 60));
       final body = await res.transform(utf8.decoder).join();
       if (res.statusCode != 200) {
         var msg = 'Groq error ${res.statusCode}. Check your key in Settings.';
