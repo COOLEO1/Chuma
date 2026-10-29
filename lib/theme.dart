@@ -4,15 +4,15 @@ import 'models.dart';
 import 'store.dart';
 
 class C {
-  static const navy = Color(0xFF0F1B3D);
-  static const bg = Color(0xFFF4F6FA);
-  static const coral = Color(0xFFE5484D);
-  static const teal = Color(0xFF12A594);
-  static const gold = Color(0xFFF2B544);
-  static const goldDark = Color(0xFF9A6B00);
-  static const ink = Color(0xFF1B2338);
-  static const muted = Color(0xFF6B7690);
-  static const line = Color(0xFFE3E7F0);
+  static const navy = Color(0xFF0E3B2E);
+  static const bg = Color(0xFFF6F4EC);
+  static const coral = Color(0xFFD9534F);
+  static const teal = Color(0xFF1F9D63);
+  static const gold = Color(0xFFE3A72F);
+  static const goldDark = Color(0xFF8A5A00);
+  static const ink = Color(0xFF1D2A24);
+  static const muted = Color(0xFF6F7B74);
+  static const line = Color(0xFFE4E1D6);
 }
 
 final _fmt = NumberFormat('#,##0');

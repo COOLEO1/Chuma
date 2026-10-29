@@ -2,9 +2,9 @@ from PIL import Image, ImageDraw
 import os
 
 S, K = 1024, 4
-NAVY = (15, 27, 61, 255)
-GOLD = (242, 181, 68, 255)
-TEAL = (18, 165, 148, 255)
+NAVY = (14, 59, 46, 255)
+GOLD = (227, 167, 47, 255)
+TEAL = (31, 157, 99, 255)
 
 def mark(size):
     n = size * K
