@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:shared_preferences/shared_preferences.dart';
+import 'autobackup.dart';
 import 'groq.dart';
 import 'store.dart';
 import 'theme.dart';
@@ -173,6 +174,8 @@ class _SettingsState extends State<SettingsScreen> {
             ),
           ]),
         ),
+        sectionTitle('Auto backup'),
+        const AutoBackupPanel(),
         sectionTitle('Backup'),
         Panel(
           child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [

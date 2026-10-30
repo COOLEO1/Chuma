@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'add_sheet.dart';
+import 'backup.dart';
 import 'ask.dart';
 import 'goals.dart';
 import 'history.dart';
@@ -13,6 +14,8 @@ import 'today.dart';
 Future<void> main() async {
   WidgetsFlutterBinding.ensureInitialized();
   await store.load();
+  store.addListener(Backup.schedule);
+  Backup.schedule();
   runApp(const ChumaApp());
 }
 
