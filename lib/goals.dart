@@ -124,6 +124,17 @@ class GoalsScreen extends StatelessWidget {
           const SizedBox(height: 10),
         ],
         pace,
+        if (plan.done) ...[
+          const SizedBox(height: 14),
+          SizedBox(
+            width: double.infinity,
+            child: FilledButton(
+              style: FilledButton.styleFrom(backgroundColor: C.navy),
+              onPressed: () => _extendGoal(context, g, plan.saved),
+              child: const Text('Continue this goal'),
+            ),
+          ),
+        ],
         if (!plan.done) ...[
           const SizedBox(height: 14),
           SizedBox(
@@ -137,6 +148,73 @@ class GoalsScreen extends StatelessWidget {
         ],
       ]),
     );
+  }
+
+  Future<void> _extendGoal(BuildContext context, Goal g, int saved) async {
+    final target = TextEditingController(text: g.target.toString());
+    var deadline = g.deadline.isAfter(DateTime.now())
+        ? g.deadline
+        : DateTime.now().add(const Duration(days: 30));
+    final ok = await showDialog<bool>(
+      context: context,
+      builder: (ctx) => StatefulBuilder(
+        builder: (ctx, setDialogState) => AlertDialog(
+          title: const Text('Continue your goal'),
+          content: Column(
+            mainAxisSize: MainAxisSize.min,
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Text('You have already saved ${mk(saved)}. Increase the target to keep saving toward the same goal.'),
+              const SizedBox(height: 16),
+              TextField(
+                controller: target,
+                keyboardType: TextInputType.number,
+                decoration: const InputDecoration(
+                  labelText: 'New target amount',
+                  prefixText: 'MK ',
+                  border: OutlineInputBorder(),
+                ),
+              ),
+              const SizedBox(height: 12),
+              OutlinedButton.icon(
+                onPressed: () async {
+                  final picked = await showDatePicker(
+                    context: ctx,
+                    initialDate: deadline.isAfter(DateTime.now())
+                        ? deadline
+                        : DateTime.now().add(const Duration(days: 1)),
+                    firstDate: DateTime.now(),
+                    lastDate: DateTime.now().add(const Duration(days: 3650)),
+                  );
+                  if (picked != null) setDialogState(() => deadline = picked);
+                },
+                icon: const Icon(Icons.event),
+                label: Text('New deadline: ${DateFormat('d MMM yyyy').format(deadline)}'),
+              ),
+            ],
+          ),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.pop(ctx, false),
+              child: const Text('Cancel'),
+            ),
+            FilledButton(
+              onPressed: () {
+                final value = int.tryParse(target.text.replaceAll(',', '').trim()) ?? 0;
+                if (value <= saved || !deadline.isAfter(DateTime.now())) return;
+                Navigator.pop(ctx, true);
+              },
+              child: const Text('Continue saving'),
+            ),
+          ],
+        ),
+      ),
+    );
+    final newTarget = int.tryParse(target.text.replaceAll(',', '').trim()) ?? 0;
+    target.dispose();
+    if (ok == true && newTarget > saved) {
+      await store.updateGoal(g, target: newTarget, deadline: deadline);
+    }
   }
 
   Future<void> _confirmDelete(BuildContext context, Goal g) async {
