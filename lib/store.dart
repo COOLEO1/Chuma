@@ -72,6 +72,20 @@ class Store extends ChangeNotifier {
     await _reload();
   }
 
+  // Updates only the goal plan. Its ID and all linked saving transactions stay intact.
+  Future<void> updateGoal(Goal goal, {required int target, required DateTime deadline}) async {
+    await _db.update(
+      'goals',
+      {
+        'target': target,
+        'deadline': deadline.millisecondsSinceEpoch,
+      },
+      where: 'id = ?',
+      whereArgs: [goal.id],
+    );
+    await _reload();
+  }
+
   Future<void> deleteGoal(int id) async {
     goals = goals.where((g) => g.id != id).toList();
     notifyListeners();
